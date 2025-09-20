@@ -82,15 +82,15 @@ export default function AnalyticsDashboard() {
         pageViewRes,
         eventRes
       ] = await Promise.all([
-        fetch(`http://localhost:5000/api/traffic?groupBy=source&${params.toString()}`),
-        fetch(`http://localhost:5000/api/funnel?${params.toString()}`),
-        fetch(`http://localhost:5000/api/funnel-chart-data?${params.toString()}`),
-        fetch(`http://localhost:5000/api/event-chart-data?${params.toString()}`),
-        fetch(`http://localhost:5000/api/breakdowns?type=carriers&${params.toString()}`),
-        fetch(`http://localhost:5000/api/breakdowns?type=policies&${params.toString()}`),
-        fetch(`http://localhost:5000/api/purchase-success?${params.toString()}`),
-        fetch(`http://localhost:5000/api/page-views-by-source?${params.toString()}`),
-        fetch(`http://localhost:5000/api/all-events?${params.toString()}`)
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/traffic?groupBy=source&${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/funnel?${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/funnel-chart-data?${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/event-chart-data?${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/breakdowns?type=carriers&${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/breakdowns?type=policies&${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/purchase-success?${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/page-views-by-source?${params.toString()}`),
+        fetch(`https://z61mbrbz88.execute-api.eu-north-1.amazonaws.com/api/all-events?${params.toString()}`)
       ]);
 
       const trafficJson = await trafficRes.json();
