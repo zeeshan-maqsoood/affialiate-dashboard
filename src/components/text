@@ -1,0 +1,1052 @@
+// import { useEffect, useState, Fragment } from "react";
+// import {
+//     LineChart,
+//     Line,
+//     XAxis,
+//     YAxis,
+//     Tooltip,
+//     Legend,
+//     ResponsiveContainer,
+//     CartesianGrid,
+//     BarChart,
+//     Bar,
+//     PieChart,
+//     Pie,
+//     Cell
+// } from "recharts";
+// import { Disclosure, Listbox, Transition, Tab } from "@headlessui/react";
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import { faGoogle, faFacebook, faTiktok, faLinkedin } from '@fortawesome/free-brands-svg-icons';
+// import { faGlobe, faBox, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
+// import { ChevronDownIcon, ChevronUpIcon, Calendar, ChevronDown } from "lucide-react";
+// import classNames from "classnames";
+// import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+
+// export default function AnalyticsDashboard() {
+//     const [trafficData, setTrafficData] = useState([]);
+//     const [funnelMetrics, setFunnelMetrics] = useState({});
+//     const [funnelChartData, setFunnelChartData] = useState([]);
+//     const [eventChartData, setEventChartData] = useState([]);
+//     const [eventPieData, setEventPieData] = useState([]);
+//     const [carrierData, setCarrierData] = useState([]);
+//     const [policyData, setPolicyData] = useState([]);
+//     const [pageViewData, setPageViewData] = useState([]);
+//     const [eventData, setEventData] = useState([]);
+//     const [totalPurchases, setTotalPurchases] = useState(0);
+//     const [totals, setTotals] = useState({ sessions: 0, activeUsers: 0, views: 0 });
+//     const [loading, setLoading] = useState(true);
+//     const [error, setError] = useState(false);
+
+//     // Pagination states for tables
+//     const [pageViewPage, setPageViewPage] = useState(1);
+//     const [eventsPage, setEventsPage] = useState(1);
+//     const itemsPerPage = 10;
+
+//     // Set today's date for default state
+//     const today = new Date();
+
+//     // New state for date picker
+//     const [showDatePicker, setShowDatePicker] = useState(false);
+//     const [dateRange, setDateRange] = useState("Today");
+//     const [customStartDate, setCustomStartDate] = useState(format(today, "yyyy-MM-dd"));
+//     const [customEndDate, setCustomEndDate] = useState(format(today, "yyyy-MM-dd"));
+
+//     // Filters
+//     const [filters, setFilters] = useState({
+//         startDate: format(today, "yyyy-MM-dd"),
+//         endDate: format(today, "yyyy-MM-dd"),
+//         country: "",
+//         deviceCategory: "",
+//         source: "",
+//     });
+
+//     // Function to handle date range selection
+//     const handleDateRangeChange = (range) => {
+//         const today = new Date();
+//         let start, end;
+
+//         switch (range) {
+//             case 'Today':
+//                 start = today;
+//                 end = today;
+//                 break;
+//             case 'yesterday':
+//                 start = subDays(today, 1);
+//                 end = subDays(today, 1);
+//                 break;
+//             case 'thisWeek':
+//                 start = startOfWeek(today);
+//                 end = endOfWeek(today);
+//                 break;
+//             case 'thisMonth':
+//                 start = startOfMonth(today);
+//                 end = endOfMonth(today);
+//                 break;
+//             case 'thisYear':
+//                 start = startOfYear(today);
+//                 end = endOfYear(today);
+//                 break;
+//             case 'last7Days':
+//                 // FIX: Google Analytics's "Last 7 days" typically excludes today.
+//                 // We set the range from 7 days ago to yesterday.
+//                 start = subDays(today, 7);
+//                 end = subDays(today, 1);
+//                 break;
+//             case 'last30Days':
+//                 start = subDays(today, 29);
+//                 end = today;
+//                 break;
+//             case 'last3Months':
+//                 start = subDays(today, 90);
+//                 end = today;
+//                 break;
+//             case 'last6Months':
+//                 start = subDays(today, 180);
+//                 end = today;
+//                 break;
+//             case 'lastYear':
+//                 start = subDays(today, 365);
+//                 end = today;
+//                 break;
+//             case 'custom':
+//                 if (!customStartDate || !customEndDate) {
+//                     return;
+//                 }
+//                 start = new Date(customStartDate);
+//                 end = new Date(customEndDate);
+//                 break;
+//             default:
+//                 start = new Date(filters.startDate);
+//                 end = new Date(filters.endDate);
+//         }
+
+//         setDateRange(range);
+//         setFilters({
+//             ...filters,
+//             startDate: format(start, 'yyyy-MM-dd'),
+//             endDate: format(end, 'yyyy-MM-dd'),
+//         });
+//         setShowDatePicker(false);
+//     };
+
+//     const deviceOptions = ["All Devices", "Desktop", "Tablet", "Mobile"];
+
+//     const sourceOptions = [
+//         { name: "All Sources", icon: faGlobe },
+//         { name: "Google", icon: faGoogle },
+//         { name: "Meta", icon: faFacebook },
+//         { name: "Bing", icon: faBox },
+//         { name: "Tiktok", icon: faTiktok },
+//         { name: "Linkedin", icon: faLinkedin },
+//         { name: "(Direct)", icon: faExternalLinkAlt },
+//     ];
+
+//     const PIE_CHART_COLORS = ["#3b82f6", "#dc2626", "#f59e0b", "#10b981"];
+
+//     async function fetchAllData() {
+//         try {
+//             setLoading(true);
+//             const params = new URLSearchParams(filters);
+
+//             // Fetch for summary cards
+//             const trafficSummaryRes = await fetch(`http://localhost:5000/api/traffic-summary?${params.toString()}`);
+//             const trafficSummaryJson = await trafficSummaryRes.json();
+//             setTotals({
+//                 sessions: trafficSummaryJson.sessions || 0,
+//                 activeUsers: trafficSummaryJson.activeUsers || 0,
+//                 views: trafficSummaryJson.views || 0,
+//             });
+
+//             // Fetch for traffic over time chart (daily data)
+//             const trafficChartRes = await fetch(`http://localhost:5000/api/traffic-daily?${params.toString()}`);
+//             const trafficChartJson = await trafficChartRes.json();
+
+//             // FIX: Sort the data by date before setting the state
+//             const sortedTrafficData = (trafficChartJson.daily || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+//             setTrafficData(sortedTrafficData);
+
+//             const purchasesRes = await fetch(`http://localhost:5000/api/purchases?${params.toString()}`);
+//             const purchasesJson = await purchasesRes.json();
+//             setTotalPurchases(purchasesJson.totalPurchases || 0);
+
+//             // Fetch other data in parallel
+//             const [
+//                 funnelMetricsRes,
+//                 funnelChartRes,
+//                 eventChartRes,
+//                 carrierRes,
+//                 policyRes,
+//                 purchaseRes,
+//                 pageViewRes,
+//                 eventRes
+//             ] = await Promise.all([
+//                 fetch(`http://localhost:5000/api/funnel?${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/funnel-chart-data?${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/event-chart-data?${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/breakdowns?type=carriers&${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/breakdowns?type=policies&${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/purchase-success?${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/page-views-by-source?${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/all-events?${params.toString()}`),
+//                 fetch(`http://localhost:5000/api/purchase-success?${params.toString()}`)
+//             ]);
+
+//             const funnelMetricsJson = await funnelMetricsRes.json();
+//             const funnelChartJson = await funnelChartRes.json();
+//             const eventChartJson = await eventChartRes.json();
+//             const carrierJson = await carrierRes.json();
+//             const policyJson = await policyRes.json();
+//             const purchaseJson = await purchaseRes.json();
+//             const pageViewJson = await pageViewRes.json();
+//             const eventJson = await eventRes.json();
+
+//             setFunnelMetrics(funnelMetricsJson.funnel || {});
+//             setFunnelChartData(funnelChartJson.results || []);
+//             setEventChartData(eventChartJson.results || []);
+//             setCarrierData(carrierJson.results || []);
+//             setPolicyData(policyJson.results || []);
+//             setPageViewData(pageViewJson.results || []);
+//             setEventData(eventJson.results || []);
+//             setTotalPurchases(purchaseJson.totalPurchases || 0);
+
+//             setError(false);
+//         } catch (err) {
+//             console.error("Error fetching analytics:", err);
+//             setError(true);
+//         } finally {
+//             setLoading(false);
+//         }
+//     }
+
+//     // Effect to process event chart data into pie chart data
+//     useEffect(() => {
+//         if (eventChartData.length > 0) {
+//             const totals = eventChartData.reduce((acc, current) => {
+//                 acc.form_start += current.form_start;
+//                 acc.form_abandon += current.form_abandon;
+//                 acc.form_submit += current.form_submit;
+//                 acc.proceed_to_checkout += current.proceed_to_checkout;
+//                 return acc;
+//             }, {
+//                 form_start: 0,
+//                 form_abandon: 0,
+//                 form_submit: 0,
+//                 proceed_to_checkout: 0
+//             });
+
+//             const pieData = [
+//                 { name: 'Form Starts', value: totals.form_start },
+//                 { name: 'Form Abandons', value: totals.form_abandon },
+//                 { name: 'Form Submits', value: totals.form_submit },
+//                 { name: 'Proceed to Checkout', value: totals.proceed_to_checkout },
+//             ];
+//             setEventPieData(pieData);
+//         } else {
+//             setEventPieData([]);
+//         }
+//     }, [eventChartData]);
+
+//     useEffect(() => {
+//         fetchAllData();
+//     }, [filters, dateRange]);
+
+//     const funnelConversionRate = (step1, step2) => {
+//         if (step1 === 0) return "0%";
+//         return `${((step2 / step1) * 100).toFixed(2)}%`;
+//     };
+
+//     // Helper function to find the icon for the selected source
+//     const getSourceIcon = (sourceName) => {
+//         const source = sourceOptions.find(opt => opt.name.toLowerCase() === (sourceName || "All Sources").toLowerCase());
+//         return source ? source.icon : faGlobe; // Use a Font Awesome icon as fallback
+//     };
+
+//     const currentSource = filters.source || "All Sources";
+//     const CurrentSourceIcon = getSourceIcon(currentSource);
+
+//     // Pagination logic
+//     const paginatedPageViewData = pageViewData.slice((pageViewPage - 1) * itemsPerPage, pageViewPage * itemsPerPage);
+//     const totalPageViewPages = Math.ceil(pageViewData.length / itemsPerPage);
+
+//     const paginatedEventData = eventData.slice((eventsPage - 1) * itemsPerPage, eventsPage * itemsPerPage);
+//     const totalEventsPages = Math.ceil(eventData.length / itemsPerPage);
+
+//     const generatePageNumbers = (currentPage, totalPages, maxButtons = 5) => {
+//         const pages = [];
+//         const halfMax = Math.floor(maxButtons / 2);
+
+//         if (totalPages <= maxButtons) {
+//             for (let i = 1; i <= totalPages; i++) {
+//                 pages.push(i);
+//             }
+//         } else {
+//             let startPage = Math.max(1, currentPage - halfMax);
+//             let endPage = Math.min(totalPages, currentPage + halfMax);
+
+//             if (currentPage - halfMax < 1) {
+//                 endPage = maxButtons;
+//             } else if (currentPage + halfMax > totalPages) {
+//                 startPage = totalPages - maxButtons + 1;
+//             }
+
+//             if (startPage > 1) {
+//                 pages.push(1);
+//                 if (startPage > 2) pages.push('...');
+//             }
+
+//             for (let i = startPage; i <= endPage; i++) {
+//                 pages.push(i);
+//             }
+
+//             if (endPage < totalPages) {
+//                 if (endPage < totalPages - 1) pages.push('...');
+//                 pages.push(totalPages);
+//             }
+//         }
+//         return pages;
+//     };
+
+//     const pageViewButtons = generatePageNumbers(pageViewPage, totalPageViewPages);
+//     const eventButtons = generatePageNumbers(eventsPage, totalEventsPages);
+
+//     return (
+//         <div className="p-4 md:p-8 bg-white min-h-screen overflow-x-hidden rounded-2xl shadow-2xl">
+//             {/* Filters in Disclosure */}
+//             <Disclosure defaultOpen>
+//                 {({ open }) => (
+//                     <div className="bg-white rounded-2xl shadow p-4 mb-8">
+//                         <Disclosure.Button className="flex w-full justify-between items-center text-lg font-semibold text-gray-700">
+//                             Filters
+//                             {open ? <ChevronUpIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
+//                         </Disclosure.Button>
+//                         <Disclosure.Panel className="mt-4">
+//                             <div className="flex items-center space-x-4">
+//                                 {/* The date picker component */}
+//                                 <div className="relative">
+//                                     <button
+//                                         onClick={() => setShowDatePicker(!showDatePicker)}
+//                                         className="flex items-center px-4 py-2 text-sm bg-white border rounded-lg shadow-sm hover:bg-gray-50"
+//                                     >
+//                                         <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+//                                         {dateRange === "custom"
+//                                              ? `${format(
+//         new Date(customStartDate),
+//         "MMM dd, yyyy"
+//     )} - ${format(new Date(customEndDate), "MMM dd, yyyy")}`
+//     : dateRange.replace(/([A-Z])/g, " $1")}
+//                                         <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
+//                                     </button>
+
+//                                     {showDatePicker && (
+//                                         <div className="absolute left-0 z-10 mt-3 w-64 sm:w-54 bg-white rounded-lg shadow-lg">
+//                                             <div className="p-2 space-y-1">
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("Today");
+//                                                         handleDateRangeChange("Today");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     Today
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("Yesterday");
+//                                                         handleDateRangeChange("Yesterday");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     Yesterday
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("ThisWeek");
+//                                                         handleDateRangeChange("ThisWeek");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     This Week
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("ThisMonth");
+//                                                         handleDateRangeChange("ThisMonth");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     This Month
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("ThisYear");
+//                                                         handleDateRangeChange("ThisYear");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     This Year
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("Last7Days");
+//                                                         handleDateRangeChange("Last7Days");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     Last 7 Days
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("Last30Days");
+//                                                         handleDateRangeChange("Last30Days");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     Last 30 Days
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("Last3Months");
+//                                                         handleDateRangeChange("Last3Months");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     Last 3 Months
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("Last6Months");
+//                                                         handleDateRangeChange("Last6Months");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     Last 6 Months
+//                                                 </button>
+//                                                 <button
+//                                                     onClick={() => {
+//                                                         setDateRange("LastYear");
+//                                                         handleDateRangeChange("LastYear");
+//                                                     }}
+//                                                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+//                                                 >
+//                                                     Last Year
+//                                                 </button>
+
+//                                                 <div className="border-t mt-2 pt-2">
+//                                                     <div className="p-2">
+//                                                         <p className="text-sm font-medium text-gray-700 mb-2">
+//                                                             Custom Range
+//                                                         </p>
+//                                                         <div className="space-y-2">
+//                                                             <input
+//                                                                 type="date"
+//                                                                 value={customStartDate || ""}
+//                                                                 onChange={(e) =>
+//                                                                     setCustomStartDate(e.target.value)
+//                                                                 }
+//                                                                 className="w-full px-2 py-1 text-sm border rounded"
+//                                                             />
+//                                                             <input
+//                                                                 type="date"
+//                                                                 value={customEndDate || ""}
+//                                                                 onChange={(e) => setCustomEndDate(e.target.value)}
+//                                                                 className="w-full px-2 py-1 text-sm border rounded"
+//                                                             />
+//                                                             <button
+//                                                                 onClick={() => {
+//                                                                     if (customStartDate && customEndDate) {
+//                                                                         setDateRange("custom");
+//                                                                         handleDateRangeChange("custom");
+//                                                                     }
+//                                                                 }}
+//                                                                 className="w-full px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+//                                                             >
+//                                                                 Apply Custom Range
+//                                                             </button>
+//                                                         </div>
+//                                                     </div>
+//                                                 </div>
+//                                             </div>
+//                                         </div>
+//                                     )}
+//                                 </div>
+//                                 {/* Device filter */}
+//                                 <Listbox
+//                                     value={filters.deviceCategory || "All Devices"}
+//                                     onChange={(value) =>
+//                                         setFilters({ ...filters, deviceCategory: value === "All Devices" ? "" : value })
+//                                     }
+//                                 >
+//                                     <div className="relative">
+//                                         <Listbox.Button className="relative w-full flex items-center px-4 py-2 cursor-default rounded-lg bg-white text-sm border shadow-sm hover:bg-gray-50">
+//                                             <span className="block truncate mr-auto">
+//                                                 {filters.deviceCategory || "All Devices"}
+//                                             </span>
+//                                             <span className="pointer-events-none flex items-center pr-2 pl-2">
+//                                                 <ChevronDown className="h-4 w-4 text-gray-500" aria-hidden="true" />
+//                                             </span>
+//                                         </Listbox.Button>
+//                                         <Transition
+//                                             as={Fragment}
+//                                             leave="transition ease-in duration-100"
+//                                             leaveFrom="opacity-100"
+//                                             leaveTo="opacity-0"
+//                                         >
+//                                             <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-10">
+//                                                 {deviceOptions.map((device, deviceIdx) => (
+//                                                     <Listbox.Option
+//                                                         key={deviceIdx}
+//                                                         className={({ active }) =>
+//                                                             classNames(
+//                                                                 "relative cursor-default select-none py-2 pl-3 pr-2",
+//                                                                 active ? "bg-indigo-100 text-indigo-900" : "text-gray-900"
+//                                                             )
+//                                                         }
+//                                                         value={device}
+//                                                     >
+//                                                         {({ selected }) => (
+//                                                             <>
+//                                                                 <span
+//                                                                     className={classNames(
+//                                                                         "block truncate",
+//                                                                         selected ? "font-medium" : "font-normal"
+//                                                                     )}
+//                                                                 >
+//                                                                     {device}
+//                                                                 </span>
+//                                                                 {selected ? (
+//                                                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600">
+//                                                                         {/* Note: You still need CheckIcon from some library */}
+//                                                                         {/* <CheckIcon className="h-5 w-5" aria-hidden="true" /> */}
+//                                                                     </span>
+//                                                                 ) : null}
+//                                                             </>
+//                                                         )}
+//                                                     </Listbox.Option>
+//                                                 ))}
+//                                             </Listbox.Options>
+//                                         </Transition>
+//                                     </div>
+//                                 </Listbox>
+
+//                                 {/* Source filter with Icons */}
+//                                 <Listbox
+//                                     value={currentSource}
+//                                     onChange={(value) =>
+//                                         setFilters({ ...filters, source: value === "All Sources" ? "" : value })
+//                                     }
+//                                 >
+//                                     <div className="relative hidden">
+//                                         <Listbox.Button className="relative w-full flex items-center px-4 py-2 cursor-default rounded-lg bg-white text-sm border shadow-sm hover:bg-gray-50">
+//                                             <div className="flex items-center space-x-2 mr-auto">
+//                                                 <FontAwesomeIcon icon={CurrentSourceIcon} className="h-4 w-4 text-gray-500" />
+//                                                 <span className="block truncate">{currentSource}</span>
+//                                             </div>
+//                                             <span className="pointer-events-none flex items-center pr-2">
+//                                                 <ChevronDown className="h-4 w-4 text-gray-500" aria-hidden="true" />
+//                                             </span>
+//                                         </Listbox.Button>
+//                                         <Transition
+//                                             as={Fragment}
+//                                             leave="transition ease-in duration-100"
+//                                             leaveFrom="opacity-100"
+//                                             leaveTo="opacity-0"
+//                                         >
+//                                             <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-10">
+//                                                 {sourceOptions.map((source, sourceIdx) => (
+//                                                     <Listbox.Option
+//                                                         key={sourceIdx}
+//                                                         className={({ active }) =>
+//                                                             classNames(
+//                                                                 "relative cursor-default select-none py-2 pl-2",
+//                                                                 active ? "bg-indigo-100 text-indigo-900" : "text-gray-900"
+//                                                             )
+//                                                         }
+//                                                         value={source.name}
+//                                                     >
+//                                                         {({ selected }) => (
+//                                                             <div className="flex items-center space-x-2">
+//                                                                 <FontAwesomeIcon icon={source.icon} className="h-5 w-5 text-gray-500" />
+//                                                                 <span
+//                                                                     className={classNames(
+//                                                                         "block truncate",
+//                                                                         selected ? "font-medium" : "font-normal"
+//                                                                     )}
+//                                                                 >
+//                                                                     {source.name}
+//                                                                 </span>
+//                                                                 {selected ? (
+//                                                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600">
+//                                                                         {/* <CheckIcon className="h-5 w-5" aria-hidden="true" /> */}
+//                                                                     </span>
+//                                                                 ) : null}
+//                                                             </div>
+//                                                         )}
+//                                                     </Listbox.Option>
+//                                                 ))}
+//                                             </Listbox.Options>
+//                                         </Transition>
+//                                     </div>
+//                                 </Listbox>
+//                             </div>
+//                         </Disclosure.Panel>
+//                     </div>
+//                 )}
+//             </Disclosure>
+
+//             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+//                 <div className="py-1">
+//                     <div className="bg-white rounded-xl h-[140px]  shadow p-6 hover:shadow-md transition-shadow border border-gray-100">
+//                         <div className="flex items-center py-4 justify-between">
+//                             <div>
+//                                 <p className="text-gray-500 text-xs font-medium">Active Users</p>
+//                                 <span className="text-2xl font-bold text-indigo-600">
+//                                     {loading ? "..." : totals.activeUsers.toLocaleString()}
+//                                 </span>
+//                             </div>
+//                             <div className="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl">
+//                                 {/* User Icon */}
+//                                 <svg xmlns="http://www.w3.org/2000/svg"
+//                                     className="w-6 h-6 text-indigo-600"
+//                                     fill="none" viewBox="0 0 24 24"
+//                                     stroke="currentColor" strokeWidth="2">
+//                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A9.969 9.969 0 0112 15c2.485 0 4.735.91 6.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+//                                 </svg>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+
+//                 <div className="py-1">
+//                     <div className="bg-white h-[140px]  rounded-xl shadow p-6 hover:shadow-md transition-shadow border border-gray-100">
+//                         <div className="flex items-center py-4 justify-between">
+//                             <div>
+//                                 <p className="text-gray-500 text-xs font-medium">Sessions</p>
+//                                 <span className="text-2xl font-bold text-green-600">
+//                                     {loading ? "..." : totals.sessions.toLocaleString()}
+//                                 </span>
+//                             </div>
+//                             <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+//                                 {/* Activity Icon */}
+//                                 <svg xmlns="http://www.w3.org/2000/svg"
+//                                     className="w-6 h-6 text-green-600"
+//                                     fill="none" viewBox="0 0 24 24"
+//                                     stroke="currentColor" strokeWidth="2">
+//                                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+//                                 </svg>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+
+//                 <div className="py-1">
+//                     <div className="bg-white h-[140px]  rounded-xl shadow p-6 hover:shadow-md transition-shadow border border-gray-100">
+//                         <div className="flex items-center py-4 justify-between">
+//                             <div>
+//                                 <p className="text-gray-500 text-xs font-medium">Views</p>
+//                                 <span className="text-2xl font-bold text-yellow-600">
+//                                     {loading ? "..." : totals.views.toLocaleString()}
+//                                 </span>
+//                             </div>
+//                             <div className="p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl">
+//                                 {/* Eye Icon */}
+//                                 <svg xmlns="http://www.w3.org/2000/svg"
+//                                     className="w-6 h-6 text-yellow-600"
+//                                     fill="none" viewBox="0 0 24 24"
+//                                     stroke="currentColor" strokeWidth="2">
+//                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+//                                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+//                                 </svg>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+
+//                 <div className="py-1">
+//                     <div className="bg-white rounded-xl h-[140px]  shadow p-6 hover:shadow-md transition-shadow border border-gray-100">
+//                         <div className="flex items-center py-4 justify-between">
+//                             <div>
+//                                 <p className="text-gray-500 text-xs font-medium">Purchases</p>
+//                                 <span className="text-2xl font-bold text-pink-600">
+//                                     {loading ? "..." : totalPurchases.toLocaleString()}
+//                                 </span>
+//                             </div>
+//                             <div className="p-3 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl">
+//                                 {/* Shopping bag icon for purchases */}
+//                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+//                                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+//                                 </svg>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+//             </div>
+//             <div className="space-y-6 lg:grid lg:grid-cols-3 lg:gap-6">
+//                 <div className="lg:col-span-2 space-y-8">
+
+//                     {/* Traffic Line Chart */}
+//                     <div className="py-2">
+//                         <div className="bg-white rounded-2xl shadow p-4 h-[450px]">
+//                             <h2 className="text-lg font-semibold text-gray-700 mb-4">Traffic Over Time</h2>
+//                             {loading ? (
+//                                 <div className="flex items-center justify-center h-full text-gray-500">
+//                                     Loading...
+//                                 </div>
+//                             ) : error ? (
+//                                 <div className="flex items-center justify-center h-full text-red-600">
+//                                     Failed to load data
+//                                 </div>
+//                             ) : (
+//                                 <ResponsiveContainer width="100%" height="90%">
+//                                     <LineChart data={trafficData}>
+//                                         <CartesianGrid strokeDasharray="3 3" />
+//                                         <XAxis dataKey="date" />
+//                                         <YAxis />
+//                                         <Tooltip />
+//                                         <Legend />
+//                                         <Line type="monotone" dataKey="sessions" stroke="#6366f1" name="Sessions" />
+//                                         <Line type="monotone" dataKey="activeUsers" stroke="#16a34a" name="Active Users" />
+//                                         <Line type="monotone" dataKey="views" stroke="#f59e0b" name="Views" />
+//                                     </LineChart>
+//                                 </ResponsiveContainer>
+//                             )}
+//                         </div>
+//                     </div>
+
+//                     {/* Funnel Conversion Chart */}
+//                     <div className="bg-white rounded-2xl shadow p-4 h-[450px] hidden">
+//                         <h2 className="text-lg font-semibold text-gray-700 mb-4">Funnel Conversion Over Time</h2>
+//                         {loading ? (
+//                             <div className="flex items-center justify-center h-full text-gray-500">
+//                                 Loading...
+//                             </div>
+//                         ) : error ? (
+//                             <div className="flex items-center justify-center h-full text-red-600">
+//                                 Failed to load data
+//                             </div>
+//                         ) : (
+//                             <ResponsiveContainer width="100%" height="90%">
+//                                 <LineChart data={funnelChartData}>
+//                                     <CartesianGrid strokeDasharray="3 3" />
+//                                     <XAxis dataKey="date" />
+//                                     <YAxis />
+//                                     <Tooltip />
+//                                     <Legend />
+//                                     <Line type="monotone" dataKey="totalQuotes" stroke="#3b82f6" name="Quotes" />
+//                                     <Line type="monotone" dataKey="checkoutClicks" stroke="#8b5cf6" name="Checkout Clicks" />
+//                                     <Line type="monotone" dataKey="completedPolicies" stroke="#22c55e" name="Completed Policies" />
+//                                 </LineChart>
+//                             </ResponsiveContainer>
+//                         )}
+//                     </div>
+//                     <div className="bg-white rounded-2xl shadow p-4 hidden ">
+//                         <h2 className="text-lg font-semibold text-gray-700 mb-4">Policy & Carrier Breakdowns</h2>
+//                         {loading ? (
+//                             <div className="flex items-center justify-center h-full text-gray-500">
+//                                 Loading...
+//                             </div>
+//                         ) : error ? (
+//                             <div className="flex items-center justify-center h-full text-red-600">
+//                                 Failed to load data
+//                             </div>
+//                         ) : (
+//                             <Tab.Group>
+//                                 <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 p-1 mb-4">
+//                                     <Tab
+//                                         className={({ selected }) =>
+//                                             classNames(
+//                                                 "w-full rounded-lg py-2.5 text-sm font-medium leading-5",
+//                                                 "focus:outline-none ring-offset-2 ring-indigo-500 focus:ring-2",
+//                                                 selected ? "bg-white shadow text-gray-700" : "text-gray-500 hover:bg-white/[0.12] hover:text-gray-900"
+//                                             )
+//                                         }
+//                                     >
+//                                         Carriers
+//                                     </Tab>
+//                                     <Tab
+//                                         className={({ selected }) =>
+//                                             classNames(
+//                                                 "w-full rounded-lg py-2.5 text-sm font-medium leading-5",
+//                                                 "focus:outline-none ring-offset-2 ring-indigo-500 focus:ring-2",
+//                                                 selected ? "bg-white shadow text-gray-700" : "text-gray-500 hover:bg-white/[0.12] hover:text-gray-900"
+//                                             )
+//                                         }
+//                                     >
+//                                         Policies
+//                                     </Tab>
+//                                 </Tab.List>
+//                                 <Tab.Panels>
+//                                     <Tab.Panel>
+//                                         <ResponsiveContainer width="100%" height={300}>
+//                                             <BarChart data={carrierData}>
+//                                                 <CartesianGrid strokeDasharray="3 3" />
+//                                                 <XAxis dataKey="label" />
+//                                                 <YAxis />
+//                                                 <Tooltip />
+//                                                 <Bar dataKey="count" fill="#6366f1" />
+//                                             </BarChart>
+//                                         </ResponsiveContainer>
+//                                     </Tab.Panel>
+//                                     <Tab.Panel>
+//                                         <ResponsiveContainer width="100%" height={300}>
+//                                             <PieChart>
+//                                                 <Pie data={policyData} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={100}>
+//                                                     {policyData.map((entry, index) => (
+//                                                         <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[index % PIE_CHART_COLORS.length]} />
+//                                                     ))}
+//                                                 </Pie>
+//                                                 <Tooltip />
+//                                                 <Legend />
+//                                             </PieChart>
+//                                         </ResponsiveContainer>
+//                                     </Tab.Panel>
+//                                 </Tab.Panels>
+//                             </Tab.Group>
+//                         )}
+//                     </div>
+//                 </div>
+
+//                 {/* Right Column: Breakdowns */}
+//                 <div className="lg:col-span-1 space-y-8 mt-2 ">
+//                     {/* Funnel Overview Metrics */}
+//                     <div className="bg-white rounded-2xl shadow p-6">
+//                         <h2 className="text-lg font-semibold text-gray-700 mb-4">Conversion Metrics</h2>
+//                         {loading ? (
+//                             <div className="flex items-center justify-center h-full text-gray-500">
+//                                 Loading...
+//                             </div>
+//                         ) : error ? (
+//                             <div className="flex items-center justify-center h-full text-red-600">
+//                                 Failed to load data
+//                             </div>
+//                         ) : (
+//                             <div className="flex flex-col gap-6">
+//                                 <div className="text-center">
+//                                     <p className="text-sm text-gray-500">Total Quotes</p>
+//                                     <p className="text-3xl font-bold text-blue-600">
+//                                         {funnelMetrics.totalQuotes?.toLocaleString() || 0}
+//                                     </p>
+//                                 </div>
+//                                 <div className="text-center">
+//                                     <p className="text-sm text-gray-500">Checkout Clicks</p>
+//                                     <p className="text-3xl font-bold text-purple-600">
+//                                         {funnelMetrics.checkoutClicks?.toLocaleString() || 0}
+//                                     </p>
+//                                     <p className="text-xs font-semibold text-gray-500">
+//                                         {funnelConversionRate(funnelMetrics.totalQuotes, funnelMetrics.checkoutClicks)} from Quotes
+//                                     </p>
+//                                 </div>
+//                                 <div className="text-center">
+//                                     <p className="text-sm text-gray-500">Completed Policies</p>
+//                                     <p className="text-3xl font-bold text-green-600">
+//                                         {funnelMetrics.completedPolicies?.toLocaleString() || 0}
+//                                     </p>
+//                                     <p className="text-xs font-semibold text-gray-500">
+//                                         {funnelConversionRate(funnelMetrics.checkoutClicks, funnelMetrics.completedPolicies)} from Clicks
+//                                     </p>
+//                                 </div>
+//                                 <div className="text-center">
+//                                     <p className="text-sm text-gray-500">Total Purchases</p>
+//                                     <p className="text-3xl font-bold text-pink-600">
+//                                         {totalPurchases.toLocaleString()}
+//                                     </p>
+//                                 </div>
+//                             </div>
+//                         )}
+//                     </div>
+
+//                     {/* User Journey Events Pie Chart */}
+//                     <div className="bg-white rounded-2xl shadow p-4 h-[450px]">
+//                         <h2 className="text-lg font-semibold text-gray-700 mb-4">User Journey Event Distribution</h2>
+//                         {loading ? (
+//                             <div className="flex items-center justify-center h-full text-gray-500">
+//                                 Loading...
+//                             </div>
+//                         ) : error ? (
+//                             <div className="flex items-center justify-center h-full text-red-600">
+//                                 Failed to load data
+//                             </div>
+//                         ) : (
+//                             <ResponsiveContainer width="100%" height="90%">
+//                                 <PieChart>
+//                                     <Pie
+//                                         data={eventPieData}
+//                                         dataKey="value"
+//                                         nameKey="name"
+//                                         cx="50%"
+//                                         cy="50%"
+//                                         outerRadius={120}
+//                                         fill="#8884d8"
+//                                         label
+//                                     >
+//                                         {eventPieData.map((entry, index) => (
+//                                             <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[index % PIE_CHART_COLORS.length]} />
+//                                         ))}
+//                                     </Pie>
+//                                     <Tooltip />
+//                                     <Legend />
+//                                 </PieChart>
+//                             </ResponsiveContainer>
+//                         )}
+//                     </div>
+
+//                     {/* Breakdowns Bar Charts and Pie Chart */}
+//                     <div className="mt-8 bg-white rounded-2xl shadow p-4 hidden">
+//                         <h2 className="text-lg font-semibold text-gray-700 mb-4">
+//                             Analytics Breakdown
+//                         </h2>
+//                         {loading ? (
+//                             <div className="flex items-center justify-center h-48 text-gray-500">
+//                                 Loading...
+//                             </div>
+//                         ) : error ? (
+//                             <div className="flex items-center justify-center h-48 text-red-600">
+//                                 Failed to load data
+//                             </div>
+//                         ) : (
+//                             <Tab.Group>
+//                                 <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 p-1 mb-4">
+//                                     <Tab
+//                                         className={({ selected }) =>
+//                                             classNames(
+//                                                 "w-full rounded-lg py-2.5 text-sm font-medium leading-5",
+//                                                 "focus:outline-none ring-offset-2 ring-indigo-500 focus:ring-2",
+//                                                 selected
+//                                                     ? "bg-white shadow text-gray-700"
+//                                                     : "text-gray-500 hover:bg-white/[0.12] hover:text-gray-900"
+//                                             )
+//                                         }
+//                                     >
+//                                         Page Views
+//                                     </Tab>
+//                                     <Tab
+//                                         className={({ selected }) =>
+//                                             classNames(
+//                                                 "w-full rounded-lg py-2.5 text-sm font-medium leading-5",
+//                                                 "focus:outline-none ring-offset-2 ring-indigo-500 focus:ring-2",
+//                                                 selected
+//                                                     ? "bg-white shadow text-gray-700"
+//                                                     : "text-gray-500 hover:bg-white/[0.12] hover:text-gray-900"
+//                                             )
+//                                         }
+//                                     >
+//                                         Events
+//                                     </Tab>
+//                                 </Tab.List>
+
+//                                 <Tab.Panels>
+//                                     <Tab.Panel>
+//                                         <div className="overflow-x-auto">
+//                                             <table className="min-w-full divide-y divide-gray-200">
+//                                                 <thead className="bg-gray-50">
+//                                                     <tr>
+//                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                                                             Page Path
+//                                                         </th>
+//                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                                                             Source
+//                                                         </th>
+//                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                                                             Active Users
+//                                                         </th>
+//                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                                                             Views
+//                                                         </th>
+//                                                     </tr>
+//                                                 </thead>
+//                                                 <tbody className="bg-white divide-y divide-gray-200">
+//                                                     {paginatedPageViewData.map((row, index) => (
+//                                                         <tr key={index}>
+//                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+//                                                                 {row.pagePath}
+//                                                             </td>
+//                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                                                                 {row.source}
+//                                                             </td>
+//                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                                                                 {row.activeUsers.toLocaleString()}
+//                                                             </td>
+//                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                                                                 {row.views.toLocaleString()}
+//                                                             </td>
+//                                                         </tr>
+//                                                     ))}
+//                                                 </tbody>
+//                                             </table>
+//                                         </div>
+//                                         {pageViewData.length > itemsPerPage && (
+//                                             <div className="mt-4 flex justify-center space-x-2">
+
+//                                                 {pageViewButtons.map((page, i) => (
+//                                                     <button
+//                                                         key={i}
+//                                                         onClick={() => typeof page === 'number' && setPageViewPage(page)}
+//                                                         className={classNames(
+//                                                             "px-4 py-2 text-sm font-medium rounded-lg",
+//                                                             page === pageViewPage ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-700",
+//                                                             typeof page !== 'number' && "pointer-events-none"
+//                                                         )}
+//                                                     >
+//                                                         {page}
+//                                                     </button>
+//                                                 ))}
+
+//                                             </div>
+//                                         )}
+//                                     </Tab.Panel>
+
+//                                     {/* Events Table */}
+//                                     <Tab.Panel>
+//                                         <div className="overflow-x-auto">
+//                                             <table className="min-w-full divide-y divide-gray-200">
+//                                                 <thead className="bg-gray-50">
+//                                                     <tr>
+//                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                                                             Event Name
+//                                                         </th>
+//                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                                                             Countjkjjkjjkkjjkkjjkkjjkkjkjjkjiiuiu
+//                                                     </tr>
+//                                                 </thead>
+//                                                 <tbody className="bg-white divide-y divide-gray-200">
+//                                                     {paginatedEventData.map((row, index) => (
+//                                                         <tr key={index}>
+//                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+//                                                                 {row.eventNakkjjkhffgdfddzdsggghgghgme}
+//                                                             </td>
+//                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                                                                 {row.eventCount.toLocaleString()}
+//                                                             </td>ooiuytyt
+//                                                         </tr>
+//                                                     ))}
+//                                                 </tbody>
+//                                             </table>
+//                                         </div>
+//                                         {eventData.length > itemsPerPage && (
+//                                             <div className="mt-4 flex justify-center space-x-2">
+
+//                                                 {eventButtons.map((page, i) => (
+//                                                     <button
+//                                                         key={i}
+//                                                         onClick={() => typeof page === 'number' && setEventsPage(page)}
+//                                                         className={classNames(
+//                                                             "px-4 py-2 text-sm font-medium rounded-lg",
+//                                                             eventsPage === i + 1 ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-700",
+//                                                             typeof page !== 'number' && "pointer-events-none"
+//                                                         )}
+//                                                     >
+//                                                         {page}
+//                                                     </button>
+//                                                 ))}
+
+//                                             </div>
+//                                         )}
+//                                     </Tab.Panel>
+//                                 </Tab.Panels>
+//                             </Tab.Group>
+//                         )}
+//                     </div>
+//                 </div>
+//             </div>
+//         </div>
+//     );
+// }

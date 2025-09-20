@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* More specific selector to override Tailwind classes */
+*[class*="ring-"],
+.ring-1,
+.ring-2,
+.ring-offset-1,
+[class*="focus:ring"] {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+* {
+  outline: none !important;
+}
+
+:focus {
+  outline: none !important;
+}
+
+/* For Tremor components specifically */
+.tremor-Card-root:focus,
+.tremor-Card-root {
+  outline: none !important;
+}
+
+/* Override Tailwind's ring utilities with higher specificity */
+.ring-1.ring-black.ring-opacity-5 {
+  border: 1px solid #e5e7eb !important;
+}
